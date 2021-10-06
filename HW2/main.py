@@ -1,8 +1,8 @@
 from marching_squares import *
 from celestial_objects import *
 
-nelx = 50
-nely = 50
+nelx = 80
+nely = 80
 gui_x = 800
 gui_y = 800
 
@@ -18,6 +18,7 @@ def main():
 
     ms = MarchingSquares(2., nelx,nely, gui_x, gui_y)
     ms.initialize()
+
     # initialize two stars
     stars = Star(N=2, mass=1000)
     stars.initialize(0.5, 0.5, 0.2, 10)
