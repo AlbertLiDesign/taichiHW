@@ -53,9 +53,9 @@ def main():
     #     gui.text(f'({x:.3}, {y:.3})', (x, y))
     #
     #     gui.circle((x, y), 0xffffff, radius)
-        ms.update(stars)
-        ms.draw_contours(gui, radius=2, color=0xffffff)
-        stars.display(gui, radius=10, color=0xffd500)
+        #ms.update(stars)
+        #ms.draw_contours(gui, radius=2, color=0xffffff)
+        #stars.display(gui, radius=10, color=0xffd500)
         gui.show()
 
 

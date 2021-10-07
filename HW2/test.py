@@ -1,8 +1,8 @@
 from marching_squares import *
 from celestial_objects import *
 
-nelx = 80
-nely = 80
+nelx = 10
+nely = 10
 gui_x = 800
 gui_y = 800
 
@@ -46,8 +46,8 @@ def main():
             x, y = gui.get_cursor_pos()
 
         ms.draw_vertices(gui, radius=3, color=0xffffff)
-
         ms.update(ti.Vector([x, y]))
+        gui.circle((x,y), radius=10, color=0xffd500)
         ms.draw_contours(gui, radius=2, color=0xffffff)
         gui.show()
 
