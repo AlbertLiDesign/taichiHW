@@ -3,19 +3,20 @@ import taichi as ti
 
 @ti.data_oriented
 class MarchingSquares():
-    def __init__(self, isovalue, nelx, nely, gui_x, gui_y):
+    def __init__(self, isovalue, nelx, nely):
         self.isovalue = isovalue
         self.nelx = nelx  # resolution X
         self.nely = nely  # resolution Y
-        self.size_x = int(gui_x / nelx)  # compute size X
-        self.size_y = int(gui_y / nely)  # compute size Y
+        self.size_x = 1.0  # compute size X
+        self.size_y = 1.0  # compute size Y
 
         self.vertices = ti.Matrix.field(4, 2, ti.f32, (self.nelx, self.nely))
         self.values = ti.Vector.field(4, ti.f32, (self.nelx, self.nely))
         self.cases = ti.field(ti.i32, (self.nelx, self.nely))
         self.edges = ti.Matrix.field(4, 2, ti.f32, (self.nelx, self.nely))
 
-    def update(self, pos):
+    def update(self, pos, isovalue):
+        self.isovalue = isovalue
         self.clear_data()
         self.compute_SDF(pos)
         self.compute_cases()
@@ -27,7 +28,6 @@ class MarchingSquares():
             self.values[i, j] = ti.Vector([0., 0., 0., 0.])
             self.cases[i, j] = 0
             self.edges[i, j] = ti.Matrix([[0., 0.], [0., 0.], [0., 0.], [0., 0.]])
-
 
     @ti.kernel
     def initialize(self):
@@ -44,7 +44,7 @@ class MarchingSquares():
         for i, j in self.vertices:
             for k in ti.static(range(4)):
                 diff = star - ti.Vector([self.vertices[i, j][k, 0], self.vertices[i, j][k, 1]])
-                dist = diff.norm(1e-2)
+                dist = diff.norm()
                 self.values[i, j][k] = dist
 
                 # sign distance value
@@ -85,28 +85,27 @@ class MarchingSquares():
 
             # reference: http://jamie-wong.com/2014/08/19/metaballs-and-marching-squares/
             if (self.cases[i, j] == 1) | (self.cases[i, j] == 14):
-                self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v3[0], ud_v3[1]], [0., 0.], [0., 0.]])
+                self.edges[i, j] = ti.Matrix([[ud_v3[0], ud_v3[1]], [ud_v0[0], ud_v0[1]], [0., 0.], [0., 0.]])
             elif (self.cases[i, j] == 2) | (self.cases[i, j] == 13):
-                self.edges[i, j] = ti.Matrix([[ud_v3[0], ud_v3[1]], [ud_v2[0], ud_v2[1]], [0., 0.], [0., 0.]])
+                self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v1[0], ud_v1[1]], [0., 0.], [0., 0.]])
             elif (self.cases[i, j] == 3) | (self.cases[i, j] == 12):
-                self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v2[0], ud_v2[1]], [0., 0.], [0., 0.]])
+                self.edges[i, j] = ti.Matrix([[ud_v3[0], ud_v3[1]], [ud_v1[0], ud_v1[1]], [0., 0.], [0., 0.]])
             elif (self.cases[i, j] == 4) | (self.cases[i, j] == 11):
                 self.edges[i, j] = ti.Matrix([[ud_v1[0], ud_v1[1]], [ud_v2[0], ud_v2[1]], [0., 0.], [0., 0.]])
             elif self.cases[i, j] == 5:
                 self.edges[i, j] = ti.Matrix(
-                    [[ud_v0[0], ud_v0[1]], [ud_v1[0], ud_v1[1]], [ud_v3[0], ud_v3[1]], [ud_v2[0], ud_v2[1]]])
+                    [[ud_v0[0], ud_v0[1]], [ud_v1[0], ud_v1[1]], [ud_v2[0], ud_v2[1]], [ud_v3[0], ud_v3[1]]])
             elif (self.cases[i, j] == 6) | (self.cases[i, j] == 9):
-                self.edges[i, j] = ti.Matrix([[ud_v1[0], ud_v1[1]], [ud_v3[0], ud_v3[1]], [0., 0.], [0., 0.]])
+                self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v2[0], ud_v2[1]], [0., 0.], [0., 0.]])
             elif (self.cases[i, j] == 7) | (self.cases[i, j] == 8):
-                self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v1[0], ud_v1[1]], [0., 0.], [0., 0.]])
+                self.edges[i, j] = ti.Matrix([[ud_v2[0], ud_v2[1]], [ud_v3[0], ud_v3[1]], [0., 0.], [0., 0.]])
             elif self.cases[i, j] == 10:
                 self.edges[i, j] = ti.Matrix(
-                    [[ud_v3[0], ud_v3[1]], [ud_v0[0], ud_v0[1]], [ud_v1[0], ud_v1[1]], [ud_v2[0], ud_v2[1]]])
+                    [[ud_v0[0], ud_v0[1]], [ud_v3[0], ud_v3[1]], [ud_v1[0], ud_v1[1]], [ud_v2[0], ud_v2[1]]])
 
     def draw_contours(self, gui, radius, color):
         edges = self.edges.to_numpy()
         cases = self.cases.to_numpy()
-        values = self.values.to_numpy()
         for i in range(cases.shape[0]):
             for j in range(cases.shape[1]):
                 gui.line([edges[i, j][0, 0], edges[i, j][0, 1]], [edges[i, j][1, 0], edges[i, j][1, 1]], radius=radius, color=color)
@@ -120,4 +119,5 @@ class MarchingSquares():
             for j in range(vertices.shape[1]):
                 gui.circles(vertices[i, j], radius=radius, color=color)
                 for k in range(4):
+                    # gui.text(f'({vertices[i, j][k, 0]:.3}, {vertices[i, j][k, 1]:.3})', [vertices[i, j][k, 0], vertices[i, j][k, 1]])
                     gui.text(f'({values[i, j][k]:.3})', [vertices[i, j][k, 0], vertices[i, j][k, 1]])

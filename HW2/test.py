@@ -8,14 +8,15 @@ gui_y = 800
 
 gui = ti.GUI("MS-galaxy", res=(gui_x, gui_y))
 
+x, y = 0.5, 0.5
+delta = 0.01
+radius = 8
+isovalue = 0.2
 
-def main():
+if __name__ == "__main__":
     ti.init(arch=ti.cpu)
-    x, y = 0.5, 0.5
-    delta = 0.01
-    radius = 8
 
-    ms = MarchingSquares(0.2, nelx,nely, gui_x, gui_y)
+    ms = MarchingSquares(0.2, nelx, nely)
     ms.initialize()
 
     while gui.running:
@@ -42,15 +43,16 @@ def main():
             y += delta
         if gui.is_pressed(ti.GUI.DOWN, 's'):
             y -= delta
+        if gui.is_pressed(ti.GUI.DOWN, 'q'):
+            isovalue += delta * 2
+        if gui.is_pressed(ti.GUI.DOWN, 'e'):
+            isovalue -= delta * 2
         if gui.is_pressed(ti.GUI.LMB):
             x, y = gui.get_cursor_pos()
 
         ms.draw_vertices(gui, radius=3, color=0xffffff)
-        ms.update(ti.Vector([x, y]))
-        gui.circle((x,y), radius=10, color=0xffd500)
-        ms.draw_contours(gui, radius=2, color=0xffffff)
+        ms.update(ti.Vector([x, y]), isovalue)
+        gui.circle((x, y), radius=10, color=0xffd500)
+        ms.draw_contours(gui, radius=2, color=0xffd500)
+        # gui.text(f'({x:.3}, {y:.3})', (x, y)) # display [x, y]
         gui.show()
-
-
-if __name__ == "__main__":
-    main()
