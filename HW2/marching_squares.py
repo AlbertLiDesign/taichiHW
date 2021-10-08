@@ -10,22 +10,24 @@ class MarchingSquares():
         self.size_x = 1.0  # compute size X
         self.size_y = 1.0  # compute size Y
 
-        self.vertices = ti.Matrix.field(4, 2, ti.f32, (self.nelx, self.nely))
-        self.values = ti.Vector.field(4, ti.f32, (self.nelx, self.nely))
+        self.vertices = ti.Vector.field(2, ti.f32, (self.nelx + 1, self.nely + 1))
+        self.values = ti.field(ti.f32, (self.nelx + 1, self.nely + 1))
         self.cases = ti.field(ti.i32, (self.nelx, self.nely))
         self.edges = ti.Matrix.field(4, 2, ti.f32, (self.nelx, self.nely))
 
     def update(self, pos, isovalue):
+        if isovalue <= 0.01:
+            isovalue = 0.01
         self.isovalue = isovalue
         self.clear_data()
         self.compute_SDF(pos)
-        self.compute_cases()
-        self.compute_edges()
+        self.compute_cases(isovalue)
+        self.compute_edges(isovalue)
 
     @ti.kernel
     def clear_data(self):
         for i, j in self.values:
-            self.values[i, j] = ti.Vector([0., 0., 0., 0.])
+            self.values[i, j] = 0.
             self.cases[i, j] = 0
             self.edges[i, j] = ti.Matrix([[0., 0.], [0., 0.], [0., 0.], [0., 0.]])
 
@@ -33,59 +35,52 @@ class MarchingSquares():
     def initialize(self):
         for i, j in self.vertices:
             scale = ti.Vector([self.nelx, self.nely])
-            a = ti.Vector([i, j]) / scale
-            b = ti.Vector([i, j + self.size_y]) / scale
-            c = ti.Vector([i + self.size_x, j + self.size_y]) / scale
-            d = ti.Vector([i + self.size_x, j]) / scale
-            self.vertices[i, j] = ti.Matrix([[a[0], a[1]], [b[0], b[1]], [c[0], c[1]], [d[0], d[1]]])
+            self.vertices[i, j] = ti.Vector([i, j]) / scale
 
     @ti.kernel
     def compute_SDF(self, star: ti.template()):
         for i, j in self.vertices:
-            for k in ti.static(range(4)):
-                diff = star - ti.Vector([self.vertices[i, j][k, 0], self.vertices[i, j][k, 1]])
-                dist = diff.norm()
-                self.values[i, j][k] = dist
+            diff = star - self.vertices[i, j]
+            dist = diff.norm_sqr()
+            self.values[i, j] = dist
 
-                # sign distance value
-                if self.values[i, j][k] < self.isovalue:
-                    self.values[i, j][k] *= -1
 
     @ti.kernel
-    def compute_cases(self):
+    def compute_cases(self, isovalue:ti.f32):
         for i, j in self.cases:
             flag = 0
-            if self.values[i, j][0] < 0.: flag += 1
-            if self.values[i, j][1] < 0.: flag += 2
-            if self.values[i, j][2] < 0.: flag += 4
-            if self.values[i, j][3] < 0.: flag += 8
+            if self.values[i, j] < isovalue: flag += 1
+            if self.values[i, j + 1] < isovalue: flag += 2
+            if self.values[i + 1, j + 1] < isovalue: flag += 4
+            if self.values[i + 1, j] < isovalue: flag += 8
             self.cases[i, j] = flag
 
+    @staticmethod
     @ti.func
-    def linear_interpolation(self, a, b):
-        return (self.isovalue - a) / (a - b);
+    def linear_interpolation(a, b, isovalue):
+        return (isovalue - a) / (a - b);
 
     @ti.kernel
-    def compute_edges(self):
+    def compute_edges(self, isovalue: ti.f32):
         for i, j in self.cases:
-            v0 = ti.Vector([self.vertices[i, j][0, 0], self.vertices[i, j][0, 1]])
-            v1 = ti.Vector([self.vertices[i, j][1, 0], self.vertices[i, j][1, 1]])
-            v2 = ti.Vector([self.vertices[i, j][2, 0], self.vertices[i, j][2, 1]])
-            v3 = ti.Vector([self.vertices[i, j][3, 0], self.vertices[i, j][3, 1]])
+            v0 = self.vertices[i, j]
+            v1 = self.vertices[i, j + 1]
+            v2 = self.vertices[i + 1, j + 1]
+            v3 = self.vertices[i + 1, j]
 
-            vl0 = self.values[i, j][0]
-            vl1 = self.values[i, j][1]
-            vl2 = self.values[i, j][2]
-            vl3 = self.values[i, j][3]
+            vl0 = self.values[i, j]
+            vl1 = self.values[i, j + 1]
+            vl2 = self.values[i + 1, j + 1]
+            vl3 = self.values[i + 1, j]
 
-            ud_v0 = v0 + (v0 - v1) * self.linear_interpolation(vl0, vl1)
-            ud_v1 = v1 + (v1 - v2) * self.linear_interpolation(vl1, vl2)
-            ud_v2 = v2 + (v2 - v3) * self.linear_interpolation(vl2, vl3)
-            ud_v3 = v3 + (v3 - v0) * self.linear_interpolation(vl3, vl0)
+            ud_v0 = v0 + (v0 - v1) * self.linear_interpolation(vl0, vl1, isovalue)
+            ud_v1 = v1 + (v1 - v2) * self.linear_interpolation(vl1, vl2, isovalue)
+            ud_v2 = v2 + (v2 - v3) * self.linear_interpolation(vl2, vl3, isovalue)
+            ud_v3 = v3 + (v3 - v0) * self.linear_interpolation(vl3, vl0, isovalue)
 
             # reference: http://jamie-wong.com/2014/08/19/metaballs-and-marching-squares/
             if (self.cases[i, j] == 1) | (self.cases[i, j] == 14):
-                self.edges[i, j] = ti.Matrix([[ud_v3[0], ud_v3[1]], [ud_v0[0], ud_v0[1]], [0., 0.], [0., 0.]])
+                self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v3[0], ud_v3[1]], [0., 0.], [0., 0.]])
             elif (self.cases[i, j] == 2) | (self.cases[i, j] == 13):
                 self.edges[i, j] = ti.Matrix([[ud_v0[0], ud_v0[1]], [ud_v1[0], ud_v1[1]], [0., 0.], [0., 0.]])
             elif (self.cases[i, j] == 3) | (self.cases[i, j] == 12):
@@ -117,7 +112,6 @@ class MarchingSquares():
         values = self.values.to_numpy()
         for i in range(vertices.shape[0]):
             for j in range(vertices.shape[1]):
-                gui.circles(vertices[i, j], radius=radius, color=color)
-                for k in range(4):
-                    # gui.text(f'({vertices[i, j][k, 0]:.3}, {vertices[i, j][k, 1]:.3})', [vertices[i, j][k, 0], vertices[i, j][k, 1]])
-                    gui.text(f'({values[i, j][k]:.3})', [vertices[i, j][k, 0], vertices[i, j][k, 1]])
+                gui.circle(vertices[i, j], radius=radius, color=color)
+                gui.text(f'({values[i, j]:.3})', vertices[i, j])
+                #     # gui.text(f'({vertices[i, j][k, 0]:.3}, {vertices[i, j][k, 1]:.3})', [vertices[i, j][k, 0], vertices[i, j][k, 1]])
