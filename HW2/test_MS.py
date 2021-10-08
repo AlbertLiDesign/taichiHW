@@ -7,6 +7,7 @@ gui_x = 800
 gui_y = 800
 
 gui = ti.GUI("Marching Squares", res=(gui_x, gui_y))
+video_manager = ti.VideoManager(output_dir='./ms_img', framerate=24, automatic_build=False)
 
 x, y = 0.5, 0.5
 delta = 0.01
@@ -52,4 +53,7 @@ if __name__ == "__main__":
         gui.circle((x, y), radius=10, color=0xffd500)
         ms.update(ti.Vector([x, y]), isovalue)
         ms.draw_contours(gui, radius=2, color=0xffd500)
+        video_manager.write_frame(gui.get_image())
         gui.show()
+    video_manager.make_video(gif=True)
+    gui.close()

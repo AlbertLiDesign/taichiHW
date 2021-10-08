@@ -38,11 +38,21 @@ class MarchingSquares():
             self.vertices[i, j] = ti.Vector([i, j]) / scale
 
     @ti.kernel
-    def compute_SDF(self, star: ti.template()):
+    def compute_SDF(self, pos: ti.template()):
         for i, j in self.vertices:
-            diff = star - self.vertices[i, j]
-            dist = diff.norm_sqr()
+            dist = 0.
+            num = 0
+            for p in range(pos.shape[0]):
+                diff = pos[p] - self.vertices[i, j]
+                dist += diff.norm_sqr()
+                num += 1
+            # diff = pos - self.vertices[i, j]
+            # dist += diff.norm_sqr()
+            # num += 1
+
+            dist /= num
             self.values[i, j] = dist
+
 
 
     @ti.kernel

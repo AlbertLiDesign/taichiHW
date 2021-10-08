@@ -9,55 +9,68 @@ gui_y = 800
 x, y = 0.5, 0.5
 delta = 0.01
 radius = 8
+isovalue = 0.05
+h = 5e-5  # time-step size
+i = 0
 
-gui = ti.GUI("MS-galaxy", res=(gui_x, gui_y))
+# control
+paused = False
 
 
-def main():
+if __name__ == "__main__":
     ti.init(arch=ti.cpu)
+    gui = ti.GUI("MS-galaxy", res=(gui_x, gui_y))
+    video_manager = ti.VideoManager(output_dir='./galaxy_img', framerate=24, automatic_build=False)
 
-    ms = MarchingSquares(2., nelx,nely, gui_x, gui_y)
+    ms = MarchingSquares(isovalue, nelx, nely)
     ms.initialize()
 
     # initialize two stars
-    stars = Star(N=2, mass=1000)
+    stars = Star(N=3, mass=1000)
     stars.initialize(0.5, 0.5, 0.2, 10)
+    planets = Planet(N=1000, mass=1)
+    planets.initialize(0.5, 0.5, 0.4, 10)
 
     while gui.running:
         while gui.get_event(ti.GUI.PRESS, ti.GUI.MOTION):
             if gui.event.key == ti.GUI.ESCAPE:
                 gui.running = False
-    #         elif gui.event.key == ti.GUI.RMB:
-    #             x, y = gui.event.pos
-    #         elif gui.event.key == ti.GUI.WHEEL:
-    #             x, y = gui.event.pos
-    #             dt = gui.event.delta
-    #             # delta is 2-dim vector (dx, dy)
-    #             # dt[0] denotes the horizontal direction, and dt[1] denotes the vertical direction
-    #             if dt[1] > 0:
-    #                 radius += 10
-    #             elif dt[1] < 0:
-    #                 radius = max(8, radius - 10)
-    #
-    #     if gui.is_pressed(ti.GUI.LEFT, 'a'):
-    #         x -= delta
-    #     if gui.is_pressed(ti.GUI.RIGHT, 'd'):
-    #         x += delta
-    #     if gui.is_pressed(ti.GUI.UP, 'w'):
-    #         y += delta
-    #     if gui.is_pressed(ti.GUI.DOWN, 's'):
-    #         y -= delta
-    #     if gui.is_pressed(ti.GUI.LMB):
-    #         x, y = gui.get_cursor_pos()
-    #
-    #     gui.text(f'({x:.3}, {y:.3})', (x, y))
-    #
-    #     gui.circle((x, y), 0xffffff, radius)
-        #ms.update(stars)
-        #ms.draw_contours(gui, radius=2, color=0xffffff)
-        #stars.display(gui, radius=10, color=0xffd500)
+            elif gui.event.key == ti.GUI.RMB:
+                x, y = gui.event.pos
+            elif gui.event.key == ti.GUI.WHEEL:
+                x, y = gui.event.pos
+                dt = gui.event.delta
+                if dt[1] > 0:
+                    radius += 10
+                elif dt[1] < 0:
+                    radius = max(8, radius - 10)
+            elif gui.event.key == ti.GUI.SPACE:
+                paused = not paused
+                print("paused =", paused)
+            elif gui.event.key == 'r':
+                stars.initialize(0.5, 0.5, 0.2, 10)
+                planets.initialize(0.5, 0.5, 0.4, 10)
+                i = 0
+            elif gui.event.key == 'i':
+                export_images = not export_images
+
+        if not paused:
+            stars.computeForce()
+            planets.computeForce(stars)
+            for celestial_obj in (stars, planets):
+                celestial_obj.update(h)
+            i += 1
+
+        if gui.is_pressed(ti.GUI.DOWN, 'q'):
+            isovalue += delta
+        if gui.is_pressed(ti.GUI.DOWN, 'e'):
+            isovalue -= delta
+
+        stars.display(gui, radius=10,color=0xffd500)
+        planets.display(gui)
+        ms.update(stars.Pos(), isovalue)
+        ms.draw_contours(gui, radius=2, color=0xffd500)
+        video_manager.write_frame(gui.get_image())
         gui.show()
-
-
-if __name__ == "__main__":
-    main()
+    video_manager.make_video(gif=True)
+    gui.close()
