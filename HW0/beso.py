@@ -34,13 +34,13 @@ F_freedof = ti.field(dtype=ti.f64, shape=(n_free_dof))
 U_freedof = ti.field(dtype=ti.f64, shape=(n_free_dof))
 
 # BESO parameters
-E = 1.
-nu = 0.3
-rmin = 4
-volfrac = 0.5 # volume limit
-penalty = 3
-xmin = 1e-3
-ert = 0.02
+E = 1. # 杨氏模量
+nu = 0.3 # 泊松比
+rmin = 4 # 过滤半径，一般取2-4
+volfrac = 0.5 # 目标体积分数
+penalty = 3 # 惩罚系数，一般取3
+xmin = 1e-3 # 空单元的材料惩罚，一般取1e-3
+ert = 0.02 # 进化率，即每次迭代的体积变化率
 
 # BESO variables
 xe = ti.field(ti.f64, shape=(nely, nelx))
