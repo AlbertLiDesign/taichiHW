@@ -177,8 +177,8 @@ def solver():
 
 def beso(crtvol):
     dc_np = dc.to_numpy()
-    l1 = 0 # dc_np.min()
-    l2 = 1e5 # dc_np.max()
+    l1 = dc_np.min()
+    l2 = dc_np.max()
     tarvol = crtvol * nely * nelx
     x = xe.to_numpy()
     while l2 - l1 > 1e-5:
