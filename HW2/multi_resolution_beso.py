@@ -14,8 +14,10 @@ display = ti.field(ti.f64, shape=(gui_x, gui_y)) # field for display
 # Model parameters
 nely = 50
 nelx = 80
+sub_res = 5
 n_node = (nelx+1) * (nely+1)
 ndof = 2 * n_node
+
 
 # FEM variables
 K = ti.field(ti.f64, shape=(ndof, ndof))
