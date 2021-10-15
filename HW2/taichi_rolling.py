@@ -3,14 +3,14 @@ import taichi as ti
 ti.init(arch=ti.cpu)
 
 n = 512
-x = ti.field(dtype=ti.i32)
-res = n + n // 4 + n // 16 + n // 64
+x = ti.field(dtype=ti.i32) # 像素
+res = n + n // 4 + n // 16 + n // 64 # 最小解析度
 img = ti.field(dtype=ti.f32, shape=(res, res))
 
-block1 = ti.root.pointer(ti.ij, n // 64)
-block2 = block1.pointer(ti.ij, 4)
-block3 = block2.pointer(ti.ij, 4)
-block3.dense(ti.ij, 4).place(x)
+block1 = ti.root.pointer(ti.ij, n // 64) # 第一个层级，8*8的block1，每个block包含64*64的小数据
+block2 = block1.pointer(ti.ij, 4) # 每个Block1分成4*4的小block2
+block3 = block2.pointer(ti.ij, 4) # 每个小格子再分成4*4的小block3
+block3.dense(ti.ij, 4).place(x) # 每个block3 含有4个pixel
 
 
 @ti.kernel
@@ -44,7 +44,6 @@ def paint():
 img.fill(0.05)
 
 gui = ti.GUI('Sparse Grids', (res, res))
-
 for i in range(100000):
     block1.deactivate_all()
     activate(i * 0.05)

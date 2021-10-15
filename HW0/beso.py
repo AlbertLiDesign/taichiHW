@@ -9,7 +9,7 @@ ti.init(ti.cpu)
 # Display
 gui_y = 500
 gui_x = 800
-display = ti.field(ti.f64, shape=(gui_x, gui_y)) # field for display
+display = ti.field(ti.f32, shape=(gui_x, gui_y)) # field for display
 
 # Model parameters
 nely = 50
@@ -18,10 +18,10 @@ n_node = (nelx+1) * (nely+1)
 ndof = 2 * n_node
 
 # FEM variables
-K = ti.field(ti.f64, shape=(ndof, ndof))
-F = ti.field(ti.f64, shape=(ndof))
-U = ti.field(ti.f64, shape=(ndof))
-Ke = ti.field(ti.f64, shape=(8,8))
+K = ti.field(ti.f32, shape=(ndof, ndof))
+F = ti.field(ti.f32, shape=(ndof))
+U = ti.field(ti.f32, shape=(ndof))
+Ke = ti.field(ti.f32, shape=(8,8))
 
 fixed_dofs = list(range(0, 2 * (nely + 1)))
 all_dofs = list(range(0, 2 * (nelx + 1) * (nely + 1)))
@@ -29,9 +29,9 @@ free_dofs = np.array(list(set(all_dofs) - set(fixed_dofs)))
 n_free_dof = len(free_dofs)
 
 free_dofs_vec = ti.field(ti.i32, shape=n_free_dof)
-K_freedof = ti.field(ti.f64, shape=(n_free_dof, n_free_dof))
-F_freedof = ti.field(dtype=ti.f64, shape=(n_free_dof))
-U_freedof = ti.field(dtype=ti.f64, shape=(n_free_dof))
+K_freedof = ti.field(ti.f32, shape=(n_free_dof, n_free_dof))
+F_freedof = ti.field(dtype=ti.f32, shape=(n_free_dof))
+U_freedof = ti.field(dtype=ti.f32, shape=(n_free_dof))
 
 # BESO parameters
 E = 1. # 杨氏模量
@@ -43,10 +43,10 @@ xmin = 1e-3 # 空单元的材料惩罚，一般取1e-3
 ert = 0.02 # 进化率，即每次迭代的体积变化率
 
 # BESO variables
-xe = ti.field(ti.f64, shape=(nely, nelx))
-dc = ti.field(ti.f64, shape=(nely, nelx))  # derivative of compliance
-compliance = ti.field(ti.f64, shape=()) # compliance
-dc_old = ti.field(ti.f64, shape=(nely, nelx))  # derivative of compliance
+xe = ti.field(ti.f32, shape=(nely, nelx))
+dc = ti.field(ti.f32, shape=(nely, nelx))  # derivative of compliance
+compliance = ti.field(ti.f32, shape=()) # compliance
+dc_old = ti.field(ti.f32, shape=(nely, nelx))  # derivative of compliance
 
 
 def examples(case=0):
