@@ -25,7 +25,7 @@ def activate(t: ti.f32):
 
 @ti.func
 def scatter(i):
-    return i + i // 4 + i // 16 + i // 64 + 2
+    return i + i // 4 + i // 16 + i // 64+2
 
 
 @ti.kernel
@@ -46,7 +46,7 @@ img.fill(0.05)
 gui = ti.GUI('Sparse Grids', (res, res))
 for i in range(100000):
     block1.deactivate_all()
-    activate(i * 0.05)
+    activate(i * 0.05) # 旋转
     paint()
     gui.set_image(img)
     gui.show()

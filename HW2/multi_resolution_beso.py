@@ -19,13 +19,13 @@ ndof = 2 * n_node
 sub_res = 2
 
 # BESO parameters
-E = 1. # 杨氏模量
-nu = 0.3 # 泊松比
-rmin = 3 # 过滤半径，一般取2-4
-volfrac = 0.5 # 目标体积分数
-penalty = 3 # 惩罚系数，一般取3
-xmin = 1e-3 # 空单元的材料惩罚，一般取1e-3
-ert = 0.02 # 进化率，即每次迭代的体积变化率
+E = 1. # Young modulus
+nu = 0.3 # Possion's rate
+rmin = 3 # filter radius
+volfrac = 0.5 # volume fraction
+ert = 0.02 # evolution rate
+penalty = 3 # penalty
+xmin = 1e-3 # minimal design variable
 
 # FEM variables
 K = ti.field(ti.f64, shape=(ndof, ndof))
@@ -80,8 +80,8 @@ def initialize():
 
 @ti.kernel
 def display_sampling():
-    s_x = int(gui_x / nelx / sub_res)
-    s_y = int(gui_y / nely / sub_res)
+    s_x = gui_x / nelx / sub_res
+    s_y = gui_y / nely / sub_res
     for i, j in ti.ndrange(gui_x, gui_y):
         elx = i // s_x
         ely = j // s_y
