@@ -1,8 +1,6 @@
 import taichi as ti
 import numpy as np
 import math
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import spsolve
 
 ti.init(ti.cpu)
 

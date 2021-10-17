@@ -32,9 +32,11 @@ def scatter(i):
 def paint():
     for i, j in ti.ndrange(n, n):
         t = x[i, j]
+        # Use ti.rescale_index(descendant_snode/field, ancestor_snode, index) to compute the ancestor index given a descendant index.
         block1_index = ti.rescale_index(x, block1, [i, j])
         block2_index = ti.rescale_index(x, block2, [i, j])
         block3_index = ti.rescale_index(x, block3, [i, j])
+        # Use ti.is_active(snode, [i, j, ...]) to query if snode[i, j, ...] is active or not.
         t += ti.is_active(block1, block1_index)
         t += ti.is_active(block2, block2_index)
         t += ti.is_active(block3, block3_index)

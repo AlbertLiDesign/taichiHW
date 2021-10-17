@@ -9,14 +9,14 @@ ti.init(ti.cpu)
 # Display
 gui_y = 500
 gui_x = 800
-display = ti.field(ti.f32, shape=(gui_x, gui_y)) # field for display
+display = ti.field(ti.f64, shape=(gui_x, gui_y)) # field for display
 
 # Model parameters
 nely = 26
 nelx = 40
+sub_res = 2
 n_node = (nelx+1) * (nely+1)
 ndof = 2 * n_node
-sub_res = 2
 
 # BESO parameters
 E = 1. # Young modulus
@@ -42,7 +42,6 @@ free_dofs_vec = ti.field(ti.i32, shape=n_free_dof)
 K_freedof = ti.field(ti.f64, shape=(n_free_dof, n_free_dof))
 F_freedof = ti.field(dtype=ti.f64, shape=(n_free_dof))
 U_freedof = ti.field(dtype=ti.f64, shape=(n_free_dof))
-
 
 # BESO variables
 change = 1.
@@ -188,10 +187,12 @@ def get_dc():
             dc[b, a] = xe[b, a] ** (penalty - 1) * d
 
 
-def solver():
+def run_fea():
+    assemble_k()
     KG = K_freedof.to_numpy()
     Fv = F_freedof.to_numpy()
     U_freedof.from_numpy(spsolve(csr_matrix(KG),Fv)) # scipy solver, will be replaced
+    backward_map_u()
 
 
 def beso(crtvol):
@@ -218,7 +219,7 @@ def beso(crtvol):
 
 if __name__ == '__main__':
     gui = ti.GUI('Taichi TopOpt', res=(gui_x, gui_y))
-    # video_manager = ti.VideoManager(output_dir='./img', framerate=2, automatic_build=False)
+    video_manager = ti.VideoManager(output_dir='./img', framerate=2, automatic_build=False)
     examples(0)
     free_dofs_vec.from_numpy(free_dofs)
     initialize() # initialize design variables
@@ -233,28 +234,22 @@ if __name__ == '__main__':
             compliance[None] = 0.
             dc_old = dc
             volume = max(volfrac, volume * (1-ert))
-            assemble_k()
-            solver()
-            backward_map_u()
+            run_fea()
             get_dc()
-            a = dc.to_numpy().min()
             dc.from_numpy(filt(dc.to_numpy()))
-            a = dc.to_numpy().min()
             if iter > 1: averaging_dc()
             history_C.append(compliance[None])
             x = beso(volume)
-
-            # check convergence
             if iter > 10:
                 change = abs((sum(history_C[iter - 5:iter]) - sum(history_C[iter - 10:iter - 5])) / sum(history_C[iter - 5:iter]))
 
             x_old = x
             xe.from_numpy(x)
             display_sampling()
-            # video_manager.write_frame(display)
+            video_manager.write_frame(display)
             print(f"iter: {iter}, volume = {volume}, compliance = {compliance[None]}, change = {change}")
-            # print(f'\rFrame {iter} is recorded', end=''+'\n')
+            print(f'\rFrame {iter} is recorded', end=''+'\n')
             gui.set_image(display)
             gui.show()
-        # video_manager.make_video(gif=True)
-        # gui.close()
+        video_manager.make_video(gif=True)
+        gui.close()
