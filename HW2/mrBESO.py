@@ -232,7 +232,8 @@ if __name__ == '__main__':
         while change > 1e-3:
             iter += 1
             compliance[None] = 0.
-            dc_old = dc
+            if iter > 1: dc_old = dc
+            # if iter > 1: dc_old.copy_from(dc)
             volume = max(volfrac, volume * (1-ert))
             run_fea()
             get_dc()

@@ -15,20 +15,19 @@ nelx = 30
 n_node = (nelx+1) * (nely+1)
 ndof = 2 * n_node
 
-# FEM variables
-K = ti.field(ti.f32, shape=(ndof, ndof))
-F = ti.field(ti.f32, shape=ndof)
-U = ti.field(ti.f32, shape=ndof)
-Ke = ti.field(ti.f32, shape=(8, 8))
-
 fixed_dofs = list(range(0, 2 * (nely + 1)))
 all_dofs = list(range(0, 2 * (nelx + 1) * (nely + 1)))
 free_dofs = np.array(list(set(all_dofs) - set(fixed_dofs)))
 n_free_dof = len(free_dofs)
 
+# FEM variables
+K = ti.field(ti.f32, shape=(ndof, ndof))
+F = ti.field(ti.f32, shape=ndof)
+U = ti.field(ti.f32, shape=ndof)
+Ke = ti.field(ti.f32, shape=(8, 8))
 free_dofs_vec = ti.field(ti.i32, shape=n_free_dof)
-F_freedof = ti.field(dtype=ti.f32, shape=(n_free_dof))
-U_freedof = ti.field(dtype=ti.f32, shape=(n_free_dof))
+F_freedof = ti.field(dtype=ti.f32, shape=n_free_dof)
+U_freedof = ti.field(dtype=ti.f32, shape=n_free_dof)
 
 # BESO parameters
 E = 1. # 杨氏模量
@@ -79,8 +78,7 @@ def clamp(x: ti.template(), ely, elx):
     return x[ely, elx] if 0 <= ely < nely and 0 <= elx < nelx else 0.
 
 
-def filt(x, dc):
-    nely, nelx = x.shape
+def filt(dc):
     rminf = math.floor(rmin)
     dcf = np.zeros((nely, nelx))
 
@@ -199,12 +197,11 @@ if __name__ == '__main__':
     volume = 1.
     history_C = []
     while gui.running:
-        x_old = xe.to_numpy()
         iter = 0
         while change > 1e-3:
             iter += 1
             compliance[None] = 0.
-            dc_old = dc
+            if iter > 1: dc_old.copy_from(dc)
             volume = max(volfrac, volume * (1-ert))
 
             # run FEA
@@ -223,17 +220,15 @@ if __name__ == '__main__':
             backward_map_u()
 
             get_dc()
-            dc.from_numpy(filt(x_old, dc.to_numpy()))
+            dc.from_numpy(filt(dc.to_numpy()))
             if iter > 1: averaging_dc()
             history_C.append(compliance[None])
             x = beso(volume)
-
+            xe.from_numpy(x)
             # check convergence
             if iter > 10:
                 change = abs((sum(history_C[iter - 5:iter]) - sum(history_C[iter - 10:iter - 5])) / sum(history_C[iter - 5:iter]))
 
-            x_old = x
-            xe.from_numpy(x)
             display_sampling()
             video_manager.write_frame(display)
             print(f"iter: {iter}, volume = {volume}, compliance = {compliance[None]}, change = {change}")
